@@ -1,0 +1,20 @@
+name: frame-exact
+on:
+  push:
+    paths: ["frame-exact/**", ".github/workflows/frame-exact.yml"]
+  pull_request:
+    paths: ["frame-exact/**", ".github/workflows/frame-exact.yml"]
+defaults:
+  run:
+    working-directory: frame-exact
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift --version
+      - run: swift test
+      - run: swift run fe
+      - run: swift run fe faults
+      - name: CLT-only build path still works
+        run: scripts/build-local.sh edl

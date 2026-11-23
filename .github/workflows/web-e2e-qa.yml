@@ -1,0 +1,49 @@
+name: web-e2e-qa
+on:
+  push:
+    paths: ["web-e2e-qa/**", ".github/workflows/web-e2e-qa.yml"]
+  pull_request:
+    paths: ["web-e2e-qa/**", ".github/workflows/web-e2e-qa.yml"]
+defaults:
+  run:
+    working-directory: web-e2e-qa
+jobs:
+  e2e:
+    runs-on: ubuntu-24.04   # Playwright 1.57 has no browser builds for ubuntu-latest (26.04)
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm run typecheck
+      - name: functional + cross-browser + responsive + a11y + devtools (6 projects)
+        run: npx playwright test --project=chromium-desktop --project=firefox-desktop --project=webkit-desktop --project=mobile-chrome --project=mobile-safari --project=tablet
+      - name: visual regression (Linux baselines)
+        run: npx playwright test --project=visual
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: |
+            web-e2e-qa/playwright-report/
+            web-e2e-qa/test-results/
+  fault-matrix:
+    runs-on: ubuntu-24.04   # Playwright 1.57 has no browser builds for ubuntu-latest (26.04)
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: every injected UI fault is caught by exactly its tests
+        run: node scripts/fault-matrix.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fault-matrix
+          path: web-e2e-qa/test-results/fault-matrix.md
